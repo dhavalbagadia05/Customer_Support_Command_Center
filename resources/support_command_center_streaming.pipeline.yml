@@ -1,0 +1,16 @@
+# Streaming Lakeflow Spark Declarative Pipeline (serverless, triggered).
+# Mirrors the settings of the existing pipeline `support_command_center_streaming`.
+resources:
+  pipelines:
+    support_command_center_streaming:
+      name: support_command_center_streaming
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      photon: true
+      channel: CURRENT
+      continuous: false
+      root_path: ../pipeline
+      libraries:
+        - glob:
+            include: ../pipeline/transformations/**

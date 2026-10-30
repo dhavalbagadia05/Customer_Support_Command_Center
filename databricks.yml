@@ -1,0 +1,37 @@
+# Declarative Automation Bundle for the Fanimation Support Command Center.
+# Resource definitions were exported from the existing workspace resources with `databricks bundle generate`.
+bundle:
+  name: fanimation_support_command_center
+
+include:
+  - resources/*.yml
+
+# Workspace-specific values are variables so this public repo holds no private references.
+# Supply the catalog with --var catalog=<name> or the BUNDLE_VAR_catalog environment variable.
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds the support_command_center schemas
+  schema:
+    description: Schema the streaming pipeline publishes to
+    default: support_command_center_sdp
+  warehouse_id:
+    description: SQL warehouse used by the Long-term Trends dashboard
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+targets:
+  dev:
+    default: true
+    mode: development
+    variables:
+      # separate schema so a dev deploy never collides with the live pipeline's tables
+      schema: support_command_center_sdp_dev
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    resources:
+      apps:
+        support_command_center:
+          name: support-command-center

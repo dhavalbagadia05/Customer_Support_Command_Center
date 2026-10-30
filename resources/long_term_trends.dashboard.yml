@@ -1,0 +1,7 @@
+# AI/BI dashboard: 36-month trends, year over year and churn history.
+resources:
+  dashboards:
+    long_term_trends:
+      display_name: Fanimation Support Command Center - Long-term Trends
+      file_path: "../Fanimation Support Command Center - Long-term Trends.lvdash.json"
+      warehouse_id: ${var.warehouse_id}

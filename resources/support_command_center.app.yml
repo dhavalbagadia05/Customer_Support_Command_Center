@@ -1,0 +1,8 @@
+# Databricks App (Streamlit). Environment variables live in ../app/app.yaml.
+# App names are workspace-global, so dev deploys get a per-developer name; the prod target uses `support-command-center`.
+resources:
+  apps:
+    support_command_center:
+      name: scc-${workspace.current_user.domain_friendly_name}
+      description: Fanimation Support Command Center
+      source_code_path: ../app
