@@ -80,7 +80,7 @@ The whole solution (ingestion, transformation, AI, governance, low-latency servi
 
 | Capability | Databricks feature | How it is used here |
 | --- | --- | --- |
-| **Governance** | **Unity Catalog** | Every raw, silver, gold and history table lives in `classic_stable_l0m1dn_catalog`, with table descriptions that also ground Genie. One permission model covers the pipeline, the AI/BI dashboard, Genie, Lakebase synced tables and the app's service principal. |
+| **Governance** | **Unity Catalog** | Every raw, silver, gold and history table lives in one Unity Catalog catalog, with table descriptions that also ground Genie. One permission model covers the pipeline, the AI/BI dashboard, Genie, Lakebase synced tables and the app's service principal. |
 | **Streaming data engineering** | **Lakeflow Spark Declarative Pipelines** | `support_command_center_streaming`: serverless pipeline. Streaming bronze tables with data-quality expectations, then silver (multilingual ticket issue signatures, release-aware stream baselines, AI-enriched social posts), then gold materialized views (service health, heatmap, frustration index, ticket anomalies, payment health, incident scorecard, Subscriber 360 & churn risk, customer outcomes). Only new rows are processed on each update. |
 | **GenAI in the pipeline** | **AI Functions** + **Foundation Model API** | `ai_query` with Claude Sonnet 4.6 writes the incident headline, summary, root cause, actions and customer macro, **once per new anomaly**. `ai_analyze_sentiment` and `ai_classify` score each new social post. |
 | **Low-latency serving + write-back** | **Lakebase (serverless Postgres)** | 15 snapshot-synced tables (`lb_*`) serve every app page with millisecond lookups, e.g. Customer 360 over about 1M subscribers. The app writes incident declarations, known-issue banners and alert acknowledgements back to Lakebase (`command_center_ops`). |
@@ -173,15 +173,17 @@ The app's **Architecture** page shows the same three diagrams interactively.
 
 ### Assets in this workspace
 
-| Asset | Location / ID |
+Replace `<catalog>` with the Unity Catalog catalog you deploy to.
+
+| Asset | Name / location |
 | --- | --- |
-| Catalog / schemas | `classic_stable_l0m1dn_catalog.support_command_center` (raw + history), `classic_stable_l0m1dn_catalog.support_command_center_sdp` (pipeline outputs) |
+| Catalog / schemas | `<catalog>.support_command_center` (raw + history), `<catalog>.support_command_center_sdp` (pipeline outputs) |
 | Notebooks | `support_command_center/01_generate_synthetic_data`, `05_generate_subscribers`, `06_generate_history`, `04_live_event_generator` |
-| Pipeline | `support_command_center_streaming` (`078c3ff3-427b-4c4b-846a-61781f1f524b`), source under `support_command_center/pipeline/transformations/` (bronze, silver, gold) |
+| Pipeline | `support_command_center_streaming`, source under `support_command_center/pipeline/transformations/` (bronze, silver, gold) |
 | Lakebase | Project `support-command-center`, branch `production`, database `databricks_postgres`; serving schema `support_command_center_sdp`, ops schema `command_center_ops` |
-| Genie space | Fanimation Support Command Center (`01f1d226b70f1202b656c554ffc9bd38`) |
-| AI/BI dashboard | Fanimation Support Command Center - Long-term Trends (`01f1d2273e931b0e95acaa9a67663fd7`) |
-| SQL warehouse | Serverless Starter (`13bf44dc52395b21`) |
+| Genie space | Fanimation Support Command Center |
+| AI/BI dashboard | Fanimation Support Command Center - Long-term Trends |
+| SQL warehouse | Any serverless SQL warehouse |
 | App | `support-command-center`, source `support_command_center/app/` (entry `command_center.py`) |
 | Dashboard file | `support_command_center/Fanimation Support Command Center - Long-term Trends.lvdash.json` |
 | Specs | `support_command_center/APP_SPEC_V2.md` (design spec; the README and code reflect the current state) |
