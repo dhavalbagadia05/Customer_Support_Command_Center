@@ -1,0 +1,1706 @@
+{
+  "datasets": [
+    {
+      "name": "hist12",
+      "displayName": "KPI history - last 12 months",
+      "queryLines": [
+        "SELECT * FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly WHERE month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly), -12)"
+      ]
+    },
+    {
+      "name": "kpi12",
+      "displayName": "KPI totals - last 12 months",
+      "queryLines": [
+        "SELECT sum(tickets) tickets, sum(avg_csat*tickets)/sum(tickets) csat, sum(sla_met_rate*tickets)/sum(tickets) sla_met_rate,\n",
+        "   sum(repeat_contact_rate*tickets)/sum(tickets) repeat_contact_rate, sum(incidents) incidents, sum(revenue_at_risk_usd) revenue_at_risk_usd,\n",
+        "   sum(avg_signal_to_declare_min*incidents)/sum(CASE WHEN avg_signal_to_declare_min IS NOT NULL THEN incidents END) signal_to_declare_min\n",
+        "   FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly WHERE month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly), -12)"
+      ]
+    },
+    {
+      "name": "yoy_month",
+      "displayName": "This year vs last year by month",
+      "queryLines": [
+        "SELECT region_group, concat(lpad(month(month),2,'0'),' ',date_format(month,'MMM')) month_label,\n",
+        "   CASE WHEN month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly),-12) THEN 'Last 12 months' ELSE 'Prior 12 months' END period,\n",
+        "   tickets, avg_csat, sla_met_rate, repeat_contact_rate, avg_signal_to_declare_min, revenue_at_risk_usd\n",
+        "   FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly WHERE month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly),-24)"
+      ]
+    },
+    {
+      "name": "yoy_change",
+      "displayName": "YoY change by metric",
+      "queryLines": [
+        "WITH t AS (SELECT CASE WHEN month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly),-12) THEN 'cur' ELSE 'prev' END p, sum(tickets) tk,\n",
+        "   sum(avg_csat*tickets)/sum(tickets) csat, sum(sla_met_rate*tickets)/sum(tickets) sla, sum(repeat_contact_rate*tickets)/sum(tickets) rep,\n",
+        "   sum(avg_signal_to_declare_min*incidents)/sum(CASE WHEN avg_signal_to_declare_min IS NOT NULL THEN incidents END) s2d,\n",
+        "   sum(customer_detected_minutes) cdm, sum(revenue_at_risk_usd) rar FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly WHERE month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_kpi_monthly),-24) GROUP BY 1),\n",
+        "   c AS (SELECT * FROM t WHERE p='cur'), v AS (SELECT * FROM t WHERE p='prev')\n",
+        "   SELECT 'Tickets' metric, (c.tk/v.tk-1) change_pct, c.tk current_12m, v.tk prior_12m FROM c, v\n",
+        "   UNION ALL SELECT 'CSAT', c.csat/v.csat-1, c.csat, v.csat FROM c, v\n",
+        "   UNION ALL SELECT 'SLA met rate', c.sla/v.sla-1, c.sla, v.sla FROM c, v\n",
+        "   UNION ALL SELECT 'Repeat contact rate', c.rep/v.rep-1, c.rep, v.rep FROM c, v\n",
+        "   UNION ALL SELECT 'Signal-to-declare minutes', c.s2d/v.s2d-1, c.s2d, v.s2d FROM c, v\n",
+        "   UNION ALL SELECT 'Customer-Detected minutes', c.cdm/v.cdm-1, c.cdm, v.cdm FROM c, v\n",
+        "   UNION ALL SELECT 'Revenue at risk', c.rar/v.rar-1, c.rar, v.rar FROM c, v"
+      ]
+    },
+    {
+      "name": "churn36",
+      "displayName": "Churn history - 36 months",
+      "queryLines": [
+        "SELECT * FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_churn_monthly"
+      ]
+    },
+    {
+      "name": "churn12",
+      "displayName": "Churn totals - last 12 months",
+      "queryLines": [
+        "SELECT sum(cancellations) cancellations, sum(cancellations)/sum(active_subscribers) avg_monthly_churn_rate, sum(mrr_lost_usd) mrr_lost_usd\n",
+        "   FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_churn_monthly WHERE month > add_months((SELECT max(month) FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_churn_monthly), -12)"
+      ]
+    },
+    {
+      "name": "churn_rate_m",
+      "displayName": "Monthly churn rate",
+      "queryLines": [
+        "SELECT month, region_group, tier, sum(cancellations)/sum(active_subscribers) churn_rate FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_churn_monthly GROUP BY ALL"
+      ]
+    },
+    {
+      "name": "churn_reason",
+      "displayName": "Cancellations by reason",
+      "queryLines": [
+        "SELECT month, region_group, tier, reason, n FROM classic_stable_l0m1dn_catalog.support_command_center.gold_hist_churn_monthly\n",
+        "   LATERAL VIEW stack(5, 'Price', cancel_price, 'Content', cancel_content, 'Payment failure', cancel_payment_failure, 'Playback / technical', cancel_playback_tech, 'Other', cancel_other) s AS reason, n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "trends12",
+      "displayName": "12-Month Trends",
+      "layout": [
+        {
+          "widget": {
+            "name": "t1",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## 12-Month Trends\n",
+                "How support and platform health moved over the last 12 months.\n",
+                "\n",
+                "*All data on this dashboard is synthetic demo history (Nov 2023 – Oct 2026) from `gold_hist_*` tables in the lakehouse, queried through the SQL warehouse. Command Center launch milestone: Jan 2025 (synthetic).*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f1",
+            "queries": [
+              {
+                "name": "f_hist12",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "region_group",
+                    "displayName": "Region",
+                    "queryName": "f_hist12"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Region"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c11",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "tickets",
+                      "expression": "`tickets`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "tickets",
+                  "displayName": "Tickets · 12 months",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Tickets · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c12",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "csat",
+                      "expression": "`csat`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "csat",
+                  "displayName": "CSAT · 12 months",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "CSAT · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c13",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "sla_met_rate",
+                      "expression": "`sla_met_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sla_met_rate",
+                  "displayName": "SLA met · 12 months",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "SLA met · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c14",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "repeat_contact_rate",
+                      "expression": "`repeat_contact_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "repeat_contact_rate",
+                  "displayName": "Repeat contact rate · 12 months",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Repeat contact rate · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c15",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "signal_to_declare_min",
+                      "expression": "`signal_to_declare_min`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "signal_to_declare_min",
+                  "displayName": "Avg minutes signal → declare",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg minutes signal → declare"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 5,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c16",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpi12",
+                  "fields": [
+                    {
+                      "name": "revenue_at_risk_usd",
+                      "expression": "`revenue_at_risk_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "revenue_at_risk_usd",
+                  "displayName": "Revenue at risk · 12 months",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Revenue at risk · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 5,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "p11",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(tickets)",
+                      "expression": "SUM(`tickets`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "sum(tickets)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Tickets"
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Tickets by month"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p12",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(avg_csat)",
+                      "expression": "AVG(`avg_csat`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(avg_csat)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "CSAT"
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "CSAT by month"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 8,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p13",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(sla_met_rate)",
+                      "expression": "AVG(`sla_met_rate`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(sla_met_rate)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "SLA met",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "SLA met rate"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p14",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(repeat_contact_rate)",
+                      "expression": "AVG(`repeat_contact_rate`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(repeat_contact_rate)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Repeat rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Repeat contact rate"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 14,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p15",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(avg_signal_to_declare_min)",
+                      "expression": "AVG(`avg_signal_to_declare_min`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(avg_signal_to_declare_min)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Minutes"
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Minutes from first customer signal to declared incident"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "p16",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hist12",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(revenue_at_risk_usd)",
+                      "expression": "SUM(`revenue_at_risk_usd`)"
+                    },
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "sum(revenue_at_risk_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "USD",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "region_group",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Region Group"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Revenue at risk from payment failures"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 20,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "yoy",
+      "displayName": "Year over Year",
+      "layout": [
+        {
+          "widget": {
+            "name": "t2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Year over Year\n",
+                "Last 12 months vs the prior 12 months.\n",
+                "\n",
+                "*All data on this dashboard is synthetic demo history (Nov 2023 – Oct 2026) from `gold_hist_*` tables in the lakehouse, queried through the SQL warehouse. Command Center launch milestone: Jan 2025 (synthetic).*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f2",
+            "queries": [
+              {
+                "name": "f_yoy_month",
+                "query": {
+                  "datasetName": "yoy_month",
+                  "fields": [
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "region_group",
+                    "displayName": "Region",
+                    "queryName": "f_yoy_month"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Region"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "y1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "yoy_change",
+                  "fields": [
+                    {
+                      "name": "metric",
+                      "expression": "`metric`"
+                    },
+                    {
+                      "name": "sum(change_pct)",
+                      "expression": "SUM(`change_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "y": {
+                  "fieldName": "metric",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Metric"
+                },
+                "x": {
+                  "fieldName": "sum(change_pct)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Change vs prior 12 months",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Change vs prior 12 months (all regions) — lower is better for repeat contacts, minutes and revenue at risk"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "y2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "yoy_month",
+                  "fields": [
+                    {
+                      "name": "month_label",
+                      "expression": "`month_label`"
+                    },
+                    {
+                      "name": "sum(tickets)",
+                      "expression": "SUM(`tickets`)"
+                    },
+                    {
+                      "name": "period",
+                      "expression": "`period`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "sum(tickets)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Tickets"
+                },
+                "color": {
+                  "fieldName": "period",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Period"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Tickets: this year vs last year"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "y3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "yoy_month",
+                  "fields": [
+                    {
+                      "name": "month_label",
+                      "expression": "`month_label`"
+                    },
+                    {
+                      "name": "avg(avg_csat)",
+                      "expression": "AVG(`avg_csat`)"
+                    },
+                    {
+                      "name": "period",
+                      "expression": "`period`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(avg_csat)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "CSAT"
+                },
+                "color": {
+                  "fieldName": "period",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Period"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "CSAT: this year vs last year"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 8,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "y4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "yoy_month",
+                  "fields": [
+                    {
+                      "name": "month_label",
+                      "expression": "`month_label`"
+                    },
+                    {
+                      "name": "avg(repeat_contact_rate)",
+                      "expression": "AVG(`repeat_contact_rate`)"
+                    },
+                    {
+                      "name": "period",
+                      "expression": "`period`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(repeat_contact_rate)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Repeat rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "period",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Period"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Repeat contact rate: this year vs last year"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "y5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "yoy_month",
+                  "fields": [
+                    {
+                      "name": "month_label",
+                      "expression": "`month_label`"
+                    },
+                    {
+                      "name": "avg(avg_signal_to_declare_min)",
+                      "expression": "AVG(`avg_signal_to_declare_min`)"
+                    },
+                    {
+                      "name": "period",
+                      "expression": "`period`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(avg_signal_to_declare_min)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Minutes"
+                },
+                "color": {
+                  "fieldName": "period",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Period"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Signal-to-declare minutes: this year vs last year"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 14,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "churn",
+      "displayName": "Churn History",
+      "layout": [
+        {
+          "widget": {
+            "name": "t3",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Churn History\n",
+                "36 months of paid-subscriber churn by tier, region and cancellation reason.\n",
+                "\n",
+                "*All data on this dashboard is synthetic demo history (Nov 2023 – Oct 2026) from `gold_hist_*` tables in the lakehouse, queried through the SQL warehouse. Command Center launch milestone: Jan 2025 (synthetic).*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f3",
+            "queries": [
+              {
+                "name": "f_churn_rate_m",
+                "query": {
+                  "datasetName": "churn_rate_m",
+                  "fields": [
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "f_churn_reason",
+                "query": {
+                  "datasetName": "churn_reason",
+                  "fields": [
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "f_churn36",
+                "query": {
+                  "datasetName": "churn36",
+                  "fields": [
+                    {
+                      "name": "region_group",
+                      "expression": "`region_group`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "region_group",
+                    "displayName": "Region",
+                    "queryName": "f_churn_rate_m"
+                  },
+                  {
+                    "fieldName": "region_group",
+                    "displayName": "Region",
+                    "queryName": "f_churn_reason"
+                  },
+                  {
+                    "fieldName": "region_group",
+                    "displayName": "Region",
+                    "queryName": "f_churn36"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Region"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "h1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn12",
+                  "fields": [
+                    {
+                      "name": "cancellations",
+                      "expression": "`cancellations`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "cancellations",
+                  "displayName": "Cancellations · 12 months",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cancellations · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "h2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn12",
+                  "fields": [
+                    {
+                      "name": "avg_monthly_churn_rate",
+                      "expression": "`avg_monthly_churn_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_monthly_churn_rate",
+                  "displayName": "Avg monthly churn rate · 12 months",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg monthly churn rate · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "h3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn12",
+                  "fields": [
+                    {
+                      "name": "mrr_lost_usd",
+                      "expression": "`mrr_lost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "mrr_lost_usd",
+                  "displayName": "MRR lost · 12 months",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "MRR lost · 12 months"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "h4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn_rate_m",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(churn_rate)",
+                      "expression": "AVG(`churn_rate`)"
+                    },
+                    {
+                      "name": "tier",
+                      "expression": "`tier`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "avg(churn_rate)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Monthly churn rate",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "tier",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Tier"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly churn rate by tier (Command Center live from Jan 2025)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "h5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn_reason",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(n)",
+                      "expression": "SUM(`n`)"
+                    },
+                    {
+                      "name": "reason",
+                      "expression": "`reason`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "sum(n)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Cancellations"
+                },
+                "color": {
+                  "fieldName": "reason",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Reason"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cancellations by reason"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "h6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn36",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "sum(mrr_lost_usd)",
+                      "expression": "SUM(`mrr_lost_usd`)"
+                    },
+                    {
+                      "name": "tier",
+                      "expression": "`tier`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": ""
+                },
+                "y": {
+                  "fieldName": "sum(mrr_lost_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "USD",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "tier",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Tier"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "MRR lost to churn"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ]
+}

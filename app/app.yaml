@@ -1,0 +1,25 @@
+command:
+  - streamlit
+  - run
+  - command_center.py
+  - --server.headless=true
+  - --theme.base=light
+  - --theme.primaryColor=#f47521
+  - --theme.backgroundColor=#f6f5f1
+  - --theme.secondaryBackgroundColor=#efede7
+  - --theme.textColor=#1f2a2e
+env:
+  - name: WAREHOUSE_ID
+    value: "13bf44dc52395b21"
+  - name: GENIE_SPACE_ID
+    value: "01f1d226b70f1202b656c554ffc9bd38"
+  - name: DASHBOARD_ID
+    value: "01f1d2273e931b0e95acaa9a67663fd7"
+  - name: UC_SCHEMA
+    value: "classic_stable_l0m1dn_catalog.support_command_center"
+  - name: LAKEBASE_ENDPOINT_PATH
+    value: "projects/support-command-center/branches/production/endpoints/primary"
+  - name: LAKEBASE_DATABASE
+    value: "databricks_postgres"
+  - name: WORKSPACE_ID
+    value: "7474656184499598"

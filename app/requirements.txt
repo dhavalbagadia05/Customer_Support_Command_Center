@@ -1,0 +1,7 @@
+streamlit==1.66.1
+databricks-sdk==0.122.0
+databricks-sql-connector==4.8.0
+pandas==2.3.3
+pyarrow==21.0.0
+plotly==7.1.0
+psycopg[binary]==3.3.6
