@@ -192,15 +192,15 @@ Project layout (everything lives in one folder):
 support_command_center/
 ├── README.md
 ├── APP_SPEC_V2.md
-├── 01_generate_synthetic_data · 02_gold_layer_and_ai · 03_lakebase_and_genie_setup
-├── 04_live_event_generator · 05_generate_subscribers · 06_generate_history
+├── 01_generate_synthetic_data · 04_live_event_generator
+├── 05_generate_subscribers · 06_generate_history
 ├── Fanimation Support Command Center - Long-term Trends.lvdash.json
 ├── app/            (command_center.py, app.yaml, requirements.txt)
 └── pipeline/
     └── transformations/  (bronze/, silver/, gold/)
 ```
 
-Notebooks `02_gold_layer_and_ai` and `03_lakebase_and_genie_setup`, and the app files `main.py` / `app.py`, are from the earlier notebook-based version. The pipeline and `command_center.py` replace them; they are kept for reference only.
+The earlier notebook-based build (notebooks `02_gold_layer_and_ai` / `03_lakebase_and_genie_setup`, app files `main.py` / `app.py` and their tables) has been removed; the pipeline and `command_center.py` are the only implementation, and schema `support_command_center` holds only the raw tables and the `gold_hist_*` history tables.
 
 ### Prerequisites
 

@@ -1,6 +1,6 @@
 # Support Command Center - App spec V2 (persona nav, Customer 360, churn, Lakebase serving, architecture)
 
-App: `support-command-center`. Source: `/Workspace/Users/dhaval.bagadia@databricks.com/support_command_center/app` (entry `main.py`, Streamlit, light theme, Vantage-style layout already in place). Keep existing look and feel. Service principal client id `7219a20a-d11b-421c-a628-71a6c1bafce9`. Deploy and verify every page renders without errors for all three personas.
+App: `support-command-center`. Source: `/Workspace/Users/dhaval.bagadia@databricks.com/support_command_center/app` (entry `command_center.py`, Streamlit, light theme, Vantage-style layout already in place). Keep existing look and feel. Service principal client id `7219a20a-d11b-421c-a628-71a6c1bafce9`. Deploy and verify every page renders without errors for all three personas.
 
 ## 1. Real serving story: read from Lakebase
 All analytics reads move from the SQL warehouse to **Lakebase Postgres** (project `support-command-center`, branch `production`, db `databricks_postgres`, endpoint `projects/support-command-center/branches/production/endpoints/primary`). The SP already has USAGE + SELECT on PG schema `support_command_center_sdp`. Snapshot synced tables, refreshed by notebook `04_live_event_generator` after each pipeline update:
