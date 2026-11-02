@@ -6,5 +6,4 @@ CREATE OR REFRESH STREAMING TABLE bronze_incidents (
 )
 COMMENT 'Raw declared incidents with domain, countries, region groups and timeline.'
 AS SELECT *, current_timestamp() AS _ingested_at
-FROM STREAM(classic_stable_l0m1dn_catalog.support_command_center.incidents)
-OPTIONS (ignoreDeletes = 'true');
+FROM STREAM(classic_stable_l0m1dn_catalog.support_command_center.incidents);
